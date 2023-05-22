@@ -196,29 +196,34 @@ static int call_syscall_8(int id, uint64_t arg1, uint64_t arg2, uint64_t arg3, u
 }
 
 
-extern int sys_process_getpid()
+extern sys_pid_t sys_process_getpid()
 {
 	return call_syscall_0(SYSCALL_PROCESS_GETPID);
 }
 
-extern int sys_process_wait_for_child(int process_id, uint32_t *status, int unk)
+extern int sys_process_wait_for_child(sys_pid_t process_id, uint32_t *status, int unk)
 {
 	return call_syscall_3(SYSCALL_PROCESS_WAIT_FOR_CHILD, process_id, status, unk);
 }
 
-extern int sys_process_exit(int status)
+extern void sys_process_exit(int status)
 {
-	return call_syscall_1(SYSCALL_PROCESS_EXIT);
+	return call_syscall_1(SYSCALL_PROCESS_EXIT, status);
 }
 
-extern int sys_process_get_status(int process_id)
+extern int sys_process_get_status(sys_pid_t process_id)
 {
 	return call_syscall_1(SYSCALL_PROCESS_GET_STATUS, process_id);
 }
 
-extern int sys_process_get_number_of_object(uint32_t object_type, uint32_t *count)
+extern int sys_process_detach_child(sys_pid_t process_id)
 {
-	return call_syscall_2(SYSCALL_PROCESS_GET_NUMBER_OF_OBJECT, object_type, count);
+	return call_syscall_1(SYSCALL_PROCESS_DETACH_CHILD, process_id);
+}
+
+extern int sys_process_get_number_of_object(uint32_t object, size_t *nump)
+{
+	return call_syscall_2(SYSCALL_PROCESS_GET_NUMBER_OF_OBJECT, object, nump);
 }
 
 extern int sys_process_get_id(uint32_t object, uint32_t *buff, size_t size, size_t *set_size)
@@ -226,39 +231,71 @@ extern int sys_process_get_id(uint32_t object, uint32_t *buff, size_t size, size
 	return call_syscall_4(SYSCALL_PROCESS_GET_ID, object, buff, size, set_size);
 }
 
-extern int sys_process_is_spu_lock_line_reservation_address(uintptr_t addr, uint64_t flags)
+extern int sys_process_get_id2(uint32_t object, uint32_t *buff, size_t size, size_t *set_size)
+{
+	// TODO: root check
+
+	return call_syscall_4(SYSCALL_PROCESS_GET_ID, object, buff, size, set_size);
+}
+
+extern int sys_process_is_spu_lock_line_reservation_address(sys_addr_t addr, uint64_t flags)
 {
 	return call_syscall_2(SYSCALL_PROCESS_IS_SPU_LOCK_LINE_RESERVATION_ADDRESS, addr, flags);
 }
 
-extern int sys_process_getppid()
+extern sys_pid_t sys_process_getppid()
 {
 	return call_syscall_0(SYSCALL_PROCESS_GETPPID);
 }
 
-extern int sys_process_kill(int process_id)
+extern int sys_process_kill(sys_pid_t process_id)
 {
 	return call_syscall_1(SYSCALL_PROCESS_KILL, process_id);
 }
 
-extern int sys_process_spawn(int *process_id, int prio, uint64_t flags, void *stack, int stack_size, int unk1, int unk2)
+extern int sys_process_get_paramsfo(uint8_t *buffer[0x40])
 {
-	return call_syscall_8(SYSCALL_PROCESS_SPAWN, process_id, prio, flags, stack, stack_size, unk1, unk2);
+	// TODO:
+
+	/*
+	RPCS3 code:
+	if (!Emu.GetTitleID().length())
+	{
+		return CELL_ENOENT;
+	}
+
+	memset(buffer.get_ptr(), 0, 0x40);
+	memcpy(buffer.get_ptr() + 1, Emu.GetTitleID().c_str(), std::min<usz>(Emu.GetTitleID().length(), 9));
+	*/
+
+	return call_syscall_1(SYSCALL_PROCESS_GET_PARAMSFO, buffer);
 }
 
-extern int sys_process_get_sdk_version(int process_id, uint32_t* sdk_version)
+extern int sys_process_get_sdk_version(sys_pid_t process_id, uint32_t* sdk_version)
 {
+	// return 475; ?????
 	return call_syscall_2(SYSCALL_PROCESS_GET_SDK_VERSION, process_id, sdk_version);
 }
 
-extern uintptr_t sys_process_get_ppu_guid()
+extern sys_addr_t sys_process_get_ppu_guid()
 {
 	return call_syscall_0(SYSCALL_PROCESS_GET_PPU_GUID);
 }
 
-extern int sys_ppu_thread_exit(int status)
+
+extern int sys_ppu_thread_exit(uint64_t status)
 {
+	// TODO:
+	/*
+		call atexit
+		mutex unlock?
+	 */
 	return call_syscall_1(SYSCALL_PPU_THREAD_EXIT, status);
+}
+
+extern int sys_ppu_thread_get_id(sys_ppu_thread_t *thread_id)
+{
+	return call_syscall_1(SYSCALL_PPU_THREAD_GET_ID, thread_id);
 }
 
 extern void sys_ppu_thread_yield()
@@ -266,26 +303,24 @@ extern void sys_ppu_thread_yield()
 	call_syscall_0(SYSCALL_PPU_THREAD_YIELD);
 }
 
-extern int sys_ppu_thread_detach(uint64_t thread_id)
+extern int sys_ppu_thread_detach(sys_ppu_thread_t thread_id)
 {
 	return call_syscall_1(SYSCALL_PPU_THREAD_DETACH, thread_id);
 }
 
-extern void sys_ppu_thread_get_join_state(int *isjoinable)
+extern void sys_ppu_thread_get_join_state(uint32_t *isjoinable)
 {
 	call_syscall_1(SYSCALL_PPU_THREAD_GET_JOIN_STATE, isjoinable);
 }
 
-extern int sys_ppu_thread_set_priority(uint64_t thread_id, int prio)
+extern int sys_ppu_thread_set_priority(sys_ppu_thread_t thread_id, int prio)
 {
-	// Flags are checked when 3071 > prio < 3199
-
 	return call_syscall_2(SYSCALL_PPU_THREAD_SET_PRIORITY, thread_id, prio);
 }
 
-extern int sys_ppu_thread_get_stack_information(sys_ppu_thread_stack_t *info)
+extern int sys_ppu_thread_get_stack_information(sys_ppu_thread_stack_t *sp)
 {
-	return call_syscall_1(SYSCALL_PPU_THREAD_GET_STACK_INFORMATION, info)
+	return call_syscall_1(SYSCALL_PPU_THREAD_GET_STACK_INFORMATION, (uint32_t)sp);
 }
 
 extern int sys_ppu_thread_stop(sys_ppu_thread_t thread_id)
@@ -298,14 +333,21 @@ extern int sys_ppu_thread_restart()
 	return call_syscall_0(SYSCALL_PPU_THREAD_RESTART);
 }
 
+extern int sys_ppu_thread_create(sys_ppu_thread_t *thread_id, void(*entry)(uint64_t), uint64_t arg, int prio, size_t stacksize, uint64_t flags, const char *threadname)
+{
+	// https://github.com/RPCS3/rpcs3/blob/73dba6d6e0a10147d821231869ee33b59eac8aa8/rpcs3/Emu/Cell/Modules/sys_ppu_thread_.cpp#L126
+	return CELL_OK;
+}
+
 extern int sys_ppu_thread_start(sys_ppu_thread_t thread_id)
 {
-	return call_syscall_1(SYSCALL_PPU_THREAD_START, thread_id);
+	// https://github.com/RPCS3/rpcs3/blob/73dba6d6e0a10147d821231869ee33b59eac8aa8/rpcs3/Emu/Cell/lv2/sys_ppu_thread.cpp#L498
+	return CELL_OK;
 }
 
 extern int sys_ppu_thread_rename(sys_ppu_thread_t thread_id, const char *name)
 {
-	return call_syscall_2(SYSCALL_PPU_THREAD_RENAME, thread_id, name);
+	return call_syscall_2(SYSCALL_PPU_THREAD_RENAME, thread_id, (uint32_t)name);
 }
 
 extern int sys_ppu_thread_recover_page_fault(sys_ppu_thread_t thread_id)
@@ -315,12 +357,74 @@ extern int sys_ppu_thread_recover_page_fault(sys_ppu_thread_t thread_id)
 
 extern int sys_ppu_thread_get_page_fault_context(sys_ppu_thread_t thread_id, sys_ppu_thread_icontext_t *ctxp)
 {
-	return call_syscall_2(SYSCALL_PPU_THREAD_GET_PAGE_FAULT_CONTEXT, thread_id, ctxp);
+	return call_syscall_2(SYSCALL_PPU_THREAD_GET_PAGE_FAULT_CONTEXT, thread_id, (uint32_t)ctxp);
 }
+
+
+extern int sys_trace_create()
+{
+	return CELL_OK;
+}
+
+extern int sys_trace_start()
+{
+	return CELL_OK;
+}
+
+extern int sys_trace_stop()
+{
+	return CELL_OK;
+}
+
+extern int sys_trace_update_top_index()
+{
+	return CELL_OK;
+}
+
+extern int sys_trace_destroy()
+{
+	return CELL_OK;
+}
+
+extern int sys_trace_drain()
+{
+	return CELL_OK;
+}
+
+extern int sys_trace_attach_process()
+{
+	return CELL_OK;
+}
+
+extern int sys_trace_allocate_buffer()
+{
+	return CELL_OK;
+}
+
+extern int sys_trace_free_buffer()
+{
+	return CELL_OK;
+}
+
+extern int sys_trace_create2()
+{
+	return CELL_OK;
+}
+
+extern int sys_trace_create2_in_cbepm()
+{
+	return CELL_OK;
+}
+
+extern int sys_trace_()
+{
+	return CELL_OK;
+}
+
 
 extern int sys_timer_create(sys_timer_t *timer_id)
 {
-	return call_syscall_1(SYSCALL_TIMER_CREATE, timer_id);
+	return call_syscall_1(SYSCALL_TIMER_CREATE, (uint32_t)timer_id);
 }
 
 extern int sys_timer_destroy(sys_timer_t timer_id)
@@ -330,7 +434,7 @@ extern int sys_timer_destroy(sys_timer_t timer_id)
 
 extern int sys_timer_get_information(sys_timer_t timer_id, sys_timer_information_t *info)
 {
-	return call_syscall_2(SYSCALL_TIMER_GET_INFORMATION, timer_id, info);
+	return call_syscall_2(SYSCALL_TIMER_GET_INFORMATION, timer_id, (uint32_t)info);
 }
 
 extern int sys_timer_start(sys_timer_t timer_id, system_time_t base_time, usecond_t period)
@@ -353,9 +457,20 @@ extern int sys_timer_disconnect_event_queue(sys_timer_t timer_id)
 	return call_syscall_1(SYSCALL_TIMER_DISCONNECT_EVENT_QUEUE, timer_id);
 }
 
+extern int sys_timer_usleep(usecond_t sleep_time)
+{
+	return call_syscall_1(SYSCALL_TIMER_USLEEP, sleep_time);
+}
+
+extern int sys_timer_sleep(second_t sleep_time)
+{
+	return call_syscall_1(SYSCALL_TIMER_SLEEP, sleep_time);
+}
+
+
 extern int sys_interrupt_tag_create(sys_interrupt_tag_t *intrtag, sys_irqoutlet_id_t irq, sys_hw_thread_t hwthread)
 {
-	return call_syscall_3(SYSCALL_INTERRUPT_TAG_CREATE, intrtag, irq, hwthread);
+	return call_syscall_3(SYSCALL_INTERRUPT_TAG_CREATE, (uint32_t)intrtag, irq, hwthread);
 }
 
 extern int sys_interrupt_tag_destroy(sys_interrupt_tag_t intrtag)
@@ -365,8 +480,19 @@ extern int sys_interrupt_tag_destroy(sys_interrupt_tag_t intrtag)
 
 extern int sys_interrupt_thread_establish(sys_interrupt_thread_handle_t *ih, sys_interrupt_tag_t intrtag, uint64_t intrthread, uint64_t arg1, uint64_t arg2)
 {
-	return call_syscall_5(SYSCALL_INTERRUPT_THREAD_DISESTABLISH, ih, intrtag, intrthread, arg1, arg2);
+	return call_syscall_5(SYSCALL_INTERRUPT_THREAD_DISESTABLISH, (uint32_t)ih, intrtag, intrthread, arg1, arg2);
 }
+
+extern void sys_interrupt_thread_eoi()
+{
+	call_syscall_0(SYSCALL_INTERRUPT_THREAD_EOI);
+}
+
+extern int sys_interrupt_thread_disestablish(sys_interrupt_thread_handle_t ih, uint64_t *tsl_mem)
+{
+	return call_syscall_2(SYSCALL_INTERRUPT_THREAD_DISESTABLISH, ih, (uint32_t)tsl_mem);
+}
+
 
 extern int sys_event_flag_create(sys_event_flag_t *id, sys_event_flag_attribute_t *attr, uint64_t init)
 {
@@ -378,17 +504,46 @@ extern int sys_event_flag_destroy(sys_event_flag_t id)
 	return call_syscall_1(SYSCALL_EVENT_FLAG_DESTROY, id);
 }
 
+extern int sys_event_flag_wait(sys_event_flag_t id, uint64_t bitptn, uint32_t mode, uint64_t *result, usecond_t timeout)
+{
+	return call_syscall_5(SYSCALL_EVENT_FLAG_WAIT, id, bitptn, mode, result, timeout);
+}
+
+extern int sys_event_flag_trywait(sys_event_flag_t id, uint64_t bitptn, uint32_t mode, uint64_t *result)
+{
+	return call_syscall_4(SYSCALL_EVENT_FLAG_TRYWAIT, id, bitptn, mode, result);
+}
+
+extern int sys_event_flag_set(sys_event_flag_t id, uint64_t bitptn)
+{
+	return call_syscall_2(SYSCALL_EVENT_FLAG_SET, id, bitptn);
+}
 
 
+extern int sys_semaphore_create(sys_semaphore_t *sem, sys_semaphore_attribute_t *attr, sys_semaphore_value_t initial_val, sys_semaphore_value_t max_val)
+{
+	return call_syscall_4(SYSCALL_SEMAPHORE_CREATE, sem, attr, initial_val, max_val);
+}
 
+extern int sys_semaphore_destroy(sys_semaphore_t sem)
+{
+	return call_syscall_1(SYSCALL_SEMAPHORE_DESTROY, sem);
+}
 
+extern int sys_semaphore_wait(sys_semaphore_t sem, usecond_t timeout)
+{
+	return call_syscall_2(SYSCALL_SEMAPHORE_WAIT, sem, timeout);
+}
 
+extern int sys_semaphore_trywait(sys_semaphore_t sem)
+{
+	return call_syscall_1(SYSCALL_SEMAPHORE_TRYWAIT, sem);
+}
 
-
-
-
-
-
+extern int sys_semaphore_post(sys_semaphore_t sem, sys_semaphore_value_t val)
+{
+	return call_syscall_2(SYSCALL_SEMAPHORE_POST, sem, val);
+}
 
 
 

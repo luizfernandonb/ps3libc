@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "compilerPath": "", //ppu-lv2-gcc
+			"includePath": [
+				"${env:PS3SDK}/ppu/lib/gcc/ppu-lv2/7.2.0/",
+				"${env:PS3SDK}/spu/lib/gcc/spu/7.2.0/",
+				"src/include"
+			]
+        }
+    ],
+    "version": 4
+}
